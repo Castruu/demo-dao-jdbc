@@ -83,7 +83,23 @@ public class SellerDaoJDBC implements SellerDao {
 
     @Override
     public List<Seller> findAll() {
-        return null;
+        PreparedStatement statement = null;
+        ResultSet set = null;
+        try {
+            statement = con.prepareStatement(
+                    "SELECT seller.*, department.Name as DepName " +
+                            "FROM seller INNER JOIN department " +
+                            "ON seller.DepartmentId = department.Id " +
+                            "ORDER BY id;"
+            );
+            set = statement.executeQuery();
+            return getSellerQueryList(set);
+        } catch (SQLException e) {
+            throw new DbException(e.getMessage());
+        } finally {
+            DB.closeSQLWrapper(set);
+            DB.closeSQLWrapper(statement);
+        }
     }
 
     @Override
@@ -100,24 +116,28 @@ public class SellerDaoJDBC implements SellerDao {
             );
             statement.setInt(1, department.getId());
             set = statement.executeQuery();
-            List<Seller> list = new ArrayList<>();
-            Map<Integer, Department> map = new HashMap<>();
-            while (set.next()) {
-                int departmentId = set.getInt("DepartmentId");
-                Department dep = map.get(departmentId);
-                if(dep == null) {
-                    dep = instantiateDepartment(set);
-                    map.put(departmentId, dep);
-                }
-                Seller seller = instantiateSeller(set, dep);
-                list.add(seller);
-            }
-            return list;
+            return getSellerQueryList(set);
         } catch (SQLException e) {
             throw new DbException(e.getMessage());
         } finally {
             DB.closeSQLWrapper(set);
             DB.closeSQLWrapper(statement);
         }
+    }
+
+    private List<Seller> getSellerQueryList(ResultSet set) throws SQLException{
+        List<Seller> list = new ArrayList<>();
+        Map<Integer, Department> map = new HashMap<>();
+        while (set.next()) {
+            int departmentId = set.getInt("DepartmentId");
+            Department dep = map.get(departmentId);
+            if(dep == null) {
+                dep = instantiateDepartment(set);
+                map.put(departmentId, dep);
+            }
+            Seller seller = instantiateSeller(set, dep);
+            list.add(seller);
+        }
+        return list;
     }
 }
