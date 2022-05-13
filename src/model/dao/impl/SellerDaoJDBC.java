@@ -30,11 +30,7 @@ public class SellerDaoJDBC implements SellerDao {
                             "(?, ?, ?, ?, ?);",
                     Statement.RETURN_GENERATED_KEYS
             );
-            statement.setString(1, seller.getName());
-            statement.setString(2, seller.getEmail());
-            statement.setDate(3, new Date(seller.getBirthDate().getTime()));
-            statement.setDouble(4, seller.getBaseSalary());
-            statement.setInt(5, seller.getDepartment().getId());
+            setSellerStatement(seller, statement);
             int rowsAffected = statement.executeUpdate();
             if(rowsAffected > 0) {
                 ResultSet set = statement.getGeneratedKeys();
@@ -55,7 +51,22 @@ public class SellerDaoJDBC implements SellerDao {
 
     @Override
     public void update(Seller seller) {
-
+        PreparedStatement statement = null;
+        try {
+            statement = con.prepareStatement(
+                    "UPDATE seller " +
+                            "SET Name = ?, Email = ?, BirthDate = ?, BaseSalary = ?, DepartmentId = ? " +
+                            "WHERE Id = ?",
+                    Statement.RETURN_GENERATED_KEYS
+            );
+            setSellerStatement(seller, statement);
+            statement.setInt(6, seller.getId());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new DbException(e.getMessage());
+        } finally {
+            DB.closeSQLWrapper(statement);
+        }
     }
 
     @Override
@@ -149,6 +160,14 @@ public class SellerDaoJDBC implements SellerDao {
             DB.closeSQLWrapper(set);
             DB.closeSQLWrapper(statement);
         }
+    }
+
+    private void setSellerStatement(Seller seller, PreparedStatement statement) throws SQLException {
+        statement.setString(1, seller.getName());
+        statement.setString(2, seller.getEmail());
+        statement.setDate(3, new Date(seller.getBirthDate().getTime()));
+        statement.setDouble(4, seller.getBaseSalary());
+        statement.setInt(5, seller.getDepartment().getId());
     }
 
     private List<Seller> getSellerQueryList(ResultSet set) throws SQLException{
